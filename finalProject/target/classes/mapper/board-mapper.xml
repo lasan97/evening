@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="boardMapper">
+
+	<select id="boardList" resultType="Board" parameterType="BoardMode">
+		select SG.* from second_goods SG
+		WHERE SG_STATUS='N'
+		<choose>
+			<when test='B_category == "A" '>
+				AND B_CATEGORY='A'
+			</when>
+			<when test="B_category == 'SG'">
+				AND B_CATEGORY='SG'
+			</when>
+		</choose>
+
+		<choose>
+			<when test="modeSet == 'recent'">
+				order by SG_ID DESC
+			</when>
+			<when test="modeSet == 'endTime'">
+				ORDER BY FLOOR(SG_END_DATE-SYSDATE)
+			</when>
+			<when test="modeSet == 'priceAsc'">
+				ORDER BY SG_SPRICE, SG_PRICE
+			</when>
+			<when test="modeSet == 'priceDesc'">
+				ORDER BY SG_SPRICE DESC, SG_PRICE DESC
+			</when>
+			<when test="modeSet == 'CountList'">
+				ORDER BY SG_COUNT DESC
+			</when>
+		</choose>
+	</select>
+	
+	<select id="boardAllList" parameterType="string" resultType="Board">
+		SELECT * FROM SECOND_GOODS
+		WHERE SG_STATUS='N'
+		<choose>
+			<when test="bCategory == 'A'">
+				AND B_CATEGORY='A'
+			</when>
+			<when test="bCategory == 'SG'">
+				AND B_CATEGORY='SG'
+			</when>
+		</choose>
+	</select>
+	
+	<update id="updateall" parameterType="AuctionHistory">
+		UPDATE AUCTION_HISTORY SET A_CHECK='Y'
+		WHERE A_PRICE NOT IN (SELECT MAX(A_PRICE) FROM AUCTION_HISTORY GROUP BY SG_ID)
+	</update>
+
+	<select id="getAuctionListCount" resultType="_int">
+		select count(*) from second_goods where sg_status='N'
+
+		<choose>
+			<when test='boardCategory == "A" '>
+				and B_CATEGORY='A'
+			</when>
+			<when test="boardCategory == 'SG'">
+				AND B_CATEGORY='SG'
+			</when>
+		</choose>
+
+	</select>
+	
+	<insert id="insertAuction" parameterType="AuctionHistory">
+		INSERT INTO AUCTION_HISTORY VALUES(SEQ_AH.NEXTVAL, #{user_Id}, #{sg_Id},#{a_Price} , SYSDATE, DEFAULT)
+	</insert>
+	
+	<update id="auctionMaxPrice" parameterType="_int">
+		UPDATE SECOND_GOODS
+		SET SG_PRICE = ( SELECT MAX(A_PRICE) FROM AUCTION_HISTORY WHERE SG_ID=#{sgId} AND A_CHECK='N')
+		WHERE SG_ID = #{sgId}
+	</update>
+	
+	<select id="selectGoodLike" parameterType="string" resultType="GoodLike">
+		SELECT * FROM GOOD_LIKE WHERE USER_ID=#{userId}
+	</select>
+	
+	<insert id="insertGoodLike" parameterType="GoodLike">
+		INSERT INTO GOOD_LIKE VALUES(SEQ_GL.NEXTVAL,#{User_Id},#{Sg_id},1)
+	</insert>
+	
+	<update id="updateGoodLike" parameterType="GoodLike">
+		UPDATE GOOD_LIKE SET GL_CHECK=#{Gl_check} WHERE GL_ID=#{Gl_Id}
+	</update>
+	
+	<update id="updateBoardLike" parameterType="GoodLike">
+		UPDATE SECOND_GOODS 
+		SET 
+		<choose>
+			<when test="Gl_check == 1">
+				SG_LIKE=SG_LIKE+1
+			</when>
+			<when test="Gl_check == 0">
+				SG_LIKE=SG_LIKE-1
+			</when>
+		</choose>
+		WHERE SG_ID=#{Sg_id}
+	</update>
+
+	<select id="boardFileList" resultType="Attachment">
+		SELECT * FROM ADD_FILE
+		WHERE FILE_STATUS='N'
+	</select>
+
+	<insert id="insertBoard" parameterType="Board">
+		INSERT INTO SECOND_GOODS
+		VALUES(SEQ_SG.NEXTVAL,#{USER_ID},#{b_Category},#{SG_BNAME},#{SG_NAME},#{TAG_NAME},DEFAULT,#{SG_PRICE},#{SG_SPRICE},#{SG_INFO},DEFAULT,SYSDATE,SYSDATE,DEFAULT,#{SG_END_DATE},#{SG_DEAL},#{SG_AREA},#{SG_DELIVERY},DEFAULT)
+	</insert>
+
+	<insert id="attachmentInsert" parameterType="Attachment">
+		INSERT INTO ADD_FILE VALUES(SEQ_FILE.NEXTVAL, (SELECT MAX(SG_ID) FROM
+		SECOND_GOODS), #{ORIGINALFILENAME}, #{RENAMEFILENAME},
+		sysdate,sysdate,default)
+	</insert>
+	
+	<insert id="insertReply" parameterType="Reply">
+		INSERT INTO REPLY VALUES(SEQ_G_REPLY.nextval,#{USER_ID},#{NICKNAME},#{SG_ID},#{REPLY_INFO},SEQ_G_REPLY.nextval,SYSDATE,SYSDATE,default)
+	</insert>
+	<insert id="insertReplyAdd" parameterType="Reply">
+		INSERT INTO REPLY VALUES(SEQ_G_REPLY.nextval,#{USER_ID},#{NICKNAME},#{SG_ID},#{REPLY_INFO},#{REPLY_ID},SYSDATE,SYSDATE,default)
+	</insert>
+	
+	<update id="boardViewCount" parameterType="_int">
+		UPDATE SECOND_GOODS
+		SET SG_COUNT = SG_COUNT+1 
+		WHERE SG_ID=#{sg_id}
+	</update>
+	
+	<select id="boardSelectOne" parameterType="_int" resultType="Board">
+		SELECT * FROM SECOND_GOODS WHERE SG_ID=#{sg_id}
+	</select>
+	
+	<select id="boardFileOne" parameterType="Attachment"
+		resultType="Attachment">
+		SELECT * FROM ADD_FILE WHERE SG_ID=#{sg_id}
+	</select>
+	
+	<select id="category" resultType="string">
+		SELECT * FROM GOODS_TAG
+	</select>
+	
+	
+	<update id="uUpdateBoard" parameterType="Board">
+		UPDATE SECOND_GOODS 
+		SET SG_BNAME = #{SG_BNAME},TAG_NAME = #{TAG_NAME},SG_PRICE=#{SG_PRICE},SG_INFO=#{SG_INFO},SG_DEAL=#{SG_DEAL},SG_AREA=#{SG_AREA},SG_DELIVERY=#{SG_DELIVERY}
+		WHERE SG_ID=#{SG_ID}
+	</update>
+	
+	<update id="aUpdateBoard" parameterType="Board">
+		UPDATE SECOND_GOODS 
+		SET SG_BNAME = #{SG_BNAME},TAG_NAME = #{TAG_NAME},SG_SPRICE=#{SG_SPRICE},SG_INFO=#{SG_INFO},SG_DEAL=#{SG_DEAL},SG_AREA=#{SG_AREA},SG_DELIVERY=#{SG_DELIVERY}
+		WHERE SG_ID=#{SG_ID}
+	</update>
+
+	<update id="attachmentUpdate">
+		UPDATE ADD_FILE
+		SET ORIGINALFILENAME=#{ORIGINALFILENAME},RENAMEFILENAME=#{RENAMEFILENAME},FILE_UPDATE_DATE=SYSDATE
+		WHERE SG_ID=#{SG_ID}
+	</update>
+	
+	<update id="deleteBoard">
+		UPDATE SECOND_GOODS
+		SET SG_STATUS='Y'
+		WHERE SG_ID=#{sgId}
+	</update>
+	
+	<select id="selectReplyList" parameterType="Reply" resultType="Reply">
+  		select REPLY_ID,to_char(REPLY_UPDATE_DATE,'yy.mm.dd hh24:mi') REPLY_DATE,USER_ID,NICKNAME,SG_ID,REPLY_INFO,REPLY_ADD,REPLY_ENROLL_DATE,REPLY_UPDATE_DATE
+  		from reply
+  		where SG_ID = #{sgId} and REPLY_STATUS = 'N'
+  		order by REPLY_ADD asc,REPLY_ID
+  	</select>
+  	
+  	<select id="selectReplyCount" resultType="_int">
+   		select count(*) 
+  		from reply
+  		where SG_ID = #{sgId} and REPLY_STATUS = 'N'
+  	</select>
+  	
+  	<update id="deleteReply">
+		UPDATE REPLY
+		SET REPLY_STATUS='Y'
+		WHERE REPLY_ADD=#{REPLY_ID}
+	</update>
+	
+  	<update id="deleteReplyAdd">
+		UPDATE REPLY
+		SET REPLY_STATUS='Y'
+		WHERE REPLY_ID=#{REPLY_ID}
+	</update>
+	
+  	<update id="replyUpdate">
+		UPDATE REPLY
+		SET REPLY_INFO=#{REPLY_INFO},REPLY_UPDATE_DATE=SYSDATE
+		WHERE REPLY_ID=#{REPLY_ID}
+	</update>
+
+  	<!-- 이경희 -->
+  	<select id="myBoardList" parameterType="map" resultType="Board">
+  		select *
+  		from second_goods
+  		WHERE SG_STATUS='N' and user_id = #{user_id}
+		<choose>
+			<when test='bc eq "A"'>
+				AND B_CATEGORY='A'
+			</when>
+			<when test='bc eq "SG"'>
+				AND B_CATEGORY='SG'
+			</when>
+		</choose>
+		order by sg_id desc
+  	</select>
+	
+	<select id="myBoardListCount" parameterType="map" resultType="_int">
+		select count(*)
+		from second_goods
+		where sg_status='N' and user_id=#{user_id}
+		<choose>
+			<when test='bc eq "A"'>
+				AND B_CATEGORY='A'
+			</when>
+			<when test='bc eq "SG"'>
+				AND B_CATEGORY='SG'
+			</when>
+		</choose>
+	</select>
+	
+	<resultMap type="AuctionHistory" id="HistoryResultSet">
+		<id property="a_Id" column="A_ID"/>
+		<result property="User_Id" column="USER_ID"/>
+		<result property="Sg_Id" column="SG_ID"/>
+		<result property="a_Price" column="A_PRICE"/>
+		<result property="a_Enroll_Date" column="A_ENROLL_DATE"/>
+		<result property="a_Check" column="A_CHECK"/>
+		<association property="board" javaType="Board">
+			<id property="SG_ID" column="SG_ID"/>
+			<result property="USER_ID" column="USER_ID"/>
+			<result property="b_Category" column="B_CATEGORY"/>
+			<result property="SG_BNAME" column="SG_BNAME"/>
+			<result property="TAG_NAME" column="TAG_NAME"/>
+			<result property="SG_NAME" column="SG_NAME"/>
+			<result property="SG_COUNT" column="SG_COUNT"/>
+			<result property="SG_LIKE" column="SG_LIKE"/>
+			<result property="SG_PRICE" column="SG_PRICE"/>
+			<result property="SG_SPRICE" column="SG_SPRICE"/>
+			<result property="SG_INFO" column="SG_INFO"/>
+			<result property="SG_CHECK" column="SG_CHECK"/>
+			<result property="SG_ENROLL_DATE" column="SG_ENROLL_DATE"/>
+			<result property="SG_UPDATE_DATE" column="SG_UPDATE_DATE"/>
+			<result property="SG_STATUS" column="SG_STATUS"/>
+			<result property="SG_END_DATE" column="SG_END_DATE"/>
+			<result property="SG_DEAL" column="SG_DEAL"/>
+			<result property="SG_AREA" column="SG_AREA"/>
+			<result property="SG_DELIVERY" column="SG_DELIVERY"/>
+		</association>
+	</resultMap>
+	
+	<select id="getAuctionHistoryCount" resultType="_int" parameterType="string">
+		select count(a.sg_id)
+		from auction_history a
+		join second_goods s on(a.sg_id = s.sg_id)
+		where a.user_id = #{user_id} and s.sg_status='N'
+	</select>
+	
+	<select id="getAuctionHistoryList" resultMap="HistoryResultSet" parameterType="string">
+		select a.*, s.*
+		from auction_history a
+		join second_goods s on(a.sg_id = s.sg_id)
+		where a.user_id = #{user_id} and s.sg_status='N'
+	</select>
+	
+	<resultMap type="GoodLike" id="LikeResultSet">
+		<id property="Gl_Id" column="GL_ID"/>
+		<result property="User_Id" column="USER_ID"/>
+		<result property="Sg_id" column="SG_ID"/>
+		<result property="Gl_check" column="GL_CHECK"/>
+		<association property="board" javaType="Board">
+			<id property="SG_ID" column="SG_ID"/>
+			<result property="USER_ID" column="USER_ID"/>
+			<result property="b_Category" column="B_CATEGORY"/>
+			<result property="SG_BNAME" column="SG_BNAME"/>
+			<result property="TAG_NAME" column="TAG_NAME"/>
+			<result property="SG_NAME" column="SG_NAME"/>
+			<result property="SG_COUNT" column="SG_COUNT"/>
+			<result property="SG_LIKE" column="SG_LIKE"/>
+			<result property="SG_PRICE" column="SG_PRICE"/>
+			<result property="SG_SPRICE" column="SG_SPRICE"/>
+			<result property="SG_INFO" column="SG_INFO"/>
+			<result property="SG_CHECK" column="SG_CHECK"/>
+			<result property="SG_ENROLL_DATE" column="SG_ENROLL_DATE"/>
+			<result property="SG_UPDATE_DATE" column="SG_UPDATE_DATE"/>
+			<result property="SG_STATUS" column="SG_STATUS"/>
+			<result property="SG_END_DATE" column="SG_END_DATE"/>
+			<result property="SG_DEAL" column="SG_DEAL"/>
+			<result property="SG_AREA" column="SG_AREA"/>
+			<result property="SG_DELIVERY" column="SG_DELIVERY"/>
+		</association>
+	</resultMap>
+	
+	<select id="myLikeListCount" resultType="_int" parameterType="map">
+		select count(g.gl_id)
+		from good_like g
+		join second_goods s on(g.sg_id = s.sg_id)
+		where g.user_id = #{user_id} and g.gl_check = 1 and s.sg_status = 'N'
+		<choose>
+			<when test='bc eq "A"'>
+				AND s.B_CATEGORY='A'
+			</when>
+			<when test='bc eq "SG"'>
+				AND s.B_CATEGORY='SG'
+			</when>
+		</choose>
+	</select>
+	
+	<select id="myLikeList" resultMap="LikeResultSet" parameterType="map">
+		select *
+		from good_like g
+		join second_goods s on(g.sg_id = s.sg_id)
+		where g.user_id = #{user_id} and g.gl_check = 1 and s.sg_status = 'N'
+		<choose>
+			<when test='bc eq "A"'>
+				AND s.B_CATEGORY='A'
+			</when>
+			<when test='bc eq "SG"'>
+				AND s.B_CATEGORY='SG'
+			</when>
+		</choose>
+	</select>
+	
+	<update id="deleteAuc" parameterType="string">
+		update a_check='Y' where SG_ID=#{SG_ID}
+		and a_id=#{a_id}
+	</update>
+</mapper>
